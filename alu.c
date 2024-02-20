@@ -16,7 +16,7 @@
  */
 
 #include "alu.h"
-#include <stdio.h>
+
 
 /**
  * Determines whether a bit vector, when interpreted as a two's complement signed integer, is negative.
@@ -114,7 +114,6 @@ uint32_t ripple_carry_addition(uint32_t value1, uint32_t value2, uint8_t initial
 
     while (not_equal(i, 31))
     {
-        printf("i: %d\n", i);
         one_bit_adder_t adder;
         adder.a = (value1 >> i) & 0x1;
         adder.b = (value2 >> i) & 0x1;
@@ -281,7 +280,7 @@ alu_result_t unsigned_multiply(uint16_t multiplicand, uint16_t multiplier) {
             // Calculate the intermediate product by multiplying the multiplicand by 2^i
             uint32_t intermediate_product = multiplicand << i;
             // Add the intermediate product to the result
-            result += intermediate_product;
+            result = add(result, intermediate_product).result;
         }
         
         // Right-shift the multiplier to move to the next bit

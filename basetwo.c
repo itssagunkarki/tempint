@@ -74,6 +74,6 @@ int lg(uint32_t power_of_two) {
         case 0x40000000: return 30;
         case 0x80000000: return 31;
         default :
-            return -1;
+            return 0;
     }
 }
