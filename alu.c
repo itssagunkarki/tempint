@@ -16,6 +16,7 @@
  */
 
 #include "alu.h"
+#include <stdio.h>
 
 /**
  * Determines whether a bit vector, when interpreted as a two's complement signed integer, is negative.
@@ -109,8 +110,11 @@ one_bit_adder_t one_bit_full_addition(one_bit_adder_t bits) {
 uint32_t ripple_carry_addition(uint32_t value1, uint32_t value2, uint8_t initial_carry_in) {
     uint8_t carry = initial_carry_in & 0x1;
     uint32_t sum = 0;
+    uint32_t i = 0;
 
-    for (int i = 0; i < 32; i++) {
+    while (not_equal(i, 31))
+    {
+        printf("i: %d\n", i);
         one_bit_adder_t adder;
         adder.a = (value1 >> i) & 0x1;
         adder.b = (value2 >> i) & 0x1;
@@ -122,6 +126,7 @@ uint32_t ripple_carry_addition(uint32_t value1, uint32_t value2, uint8_t initial
         // Update the sum and carry for the next iteration
         sum |= (adder.sum << i);
         carry = adder.c_out;
+        i = lg(exponentiate(i) << 1);
     }
 
     return sum;
@@ -267,7 +272,7 @@ uint32_t multiply_by_power_of_two(uint16_t value, uint16_t power_of_two) {
 alu_result_t unsigned_multiply(uint16_t multiplicand, uint16_t multiplier) {
     alu_result_t product = {};  // Initialize the result structure
     uint32_t result = 0;        // Initialize the result to 0
-    int i = 0;                  // Initialize the bit index
+    uint32_t i = 0;                  // Initialize the bit index
 
     // Iterate through each bit of the multiplier
     while (multiplier) {
@@ -282,7 +287,7 @@ alu_result_t unsigned_multiply(uint16_t multiplicand, uint16_t multiplier) {
         // Right-shift the multiplier to move to the next bit
         multiplier >>= 1;
         // Increment the bit index
-        i++;
+        i = lg(exponentiate(i) << 1);
     }
 
     // Store the lower 16 bits of the result in the product's result field
