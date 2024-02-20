@@ -2,7 +2,7 @@
  *
  * @file basetwo.c
  *
- * @author (TYPE YOUR NAME HERE)
+ * @author Sagun Karki
  * @author (TYPE YOUR PARTNER'S NAME HERE, IF APPLICABLE)
  *
  * @brief Functions that students must implement for IntegerLab to demonstrate
@@ -24,7 +24,11 @@
  * @return 2 raised to the power of <code>exponent</code>
  */
 uint32_t exponentiate(int exponent) {
-    return 0;
+    // Ensure exponent is within the valid range [0, 31]
+    exponent &= 31;
+
+    // Left shift 1 by the value of the exponent to compute 2^exponent
+    return 1 << exponent;
 }
 
 /**
@@ -39,6 +43,36 @@ int lg(uint32_t power_of_two) {
             return 0;
         case 0x2 :
             return 1;
+        case 0x4: return 2;
+        case 0x8: return 3;
+        case 0x10: return 4;
+        case 0x20: return 5;
+        case 0x40: return 6;
+        case 0x80: return 7;
+        case 0x100: return 8;
+        case 0x200: return 9;
+        case 0x400: return 10;
+        case 0x800: return 11;
+        case 0x1000: return 12;
+        case 0x2000: return 13;
+        case 0x4000: return 14;
+        case 0x8000: return 15;
+        case 0x10000: return 16;
+        case 0x20000: return 17;
+        case 0x40000: return 18;
+        case 0x80000: return 19;
+        case 0x100000: return 20;
+        case 0x200000: return 21;
+        case 0x400000: return 22;
+        case 0x800000: return 23;
+        case 0x1000000: return 24;
+        case 0x2000000: return 25;
+        case 0x4000000: return 26;
+        case 0x8000000: return 27;
+        case 0x10000000: return 28;
+        case 0x20000000: return 29;
+        case 0x40000000: return 30;
+        case 0x80000000: return 31;
         default :
             return -1;
     }
