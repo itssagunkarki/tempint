@@ -2,7 +2,7 @@
  *
  * @file alu.c
  *
- * @author (TYPE YOUR NAME HERE)
+ * @author Sagun Karki
  * @author (TYPE YOUR PARTNER'S NAME HERE, IF APPLICABLE)
  *
  * @brief Functions that students must implement for IntegerLab to demonstrate
@@ -23,7 +23,8 @@
  * @return 1 if the interpreted argument is less than zero; 0 otherwise
  */
 bool is_negative(uint16_t value) {
-    return false;
+    // Since it is a 16-bit integer, the most significant bit is the sign bit
+    return (value >> 15) & 1;
 }
 
 /**
@@ -33,7 +34,8 @@ bool is_negative(uint16_t value) {
  * @return 1 if the two arguments are equal; 0 otherwise
  */
 bool equal(uint16_t value1, uint16_t value2) {
-    return false;
+    // if both values are equal, then the XOR of the two values will be 0
+    return !(value1 ^ value2);
 }
 
 /**
@@ -43,7 +45,7 @@ bool equal(uint16_t value1, uint16_t value2) {
  * @return 0 if the two arguments are equal; 1 otherwise
  */
 bool not_equal(uint16_t value1, uint16_t value2) {
-    return false;
+    return !equal(value1, value2);
 }
 
 /**
@@ -52,7 +54,7 @@ bool not_equal(uint16_t value1, uint16_t value2) {
  * @return 1 if the argument is 0; 0 otherwise
  */
 bool logical_not(uint32_t value) {
-    return false;
+    return !value;
 }
 
 /**
@@ -62,7 +64,7 @@ bool logical_not(uint32_t value) {
  * @return 1 if both arguments are <code>true</code>; 0 otherwise.
  */
 bool logical_and(uint32_t value1, uint32_t value2) {
-    return false;
+    return value1 && value2;
 }
 
 /**
@@ -72,7 +74,7 @@ bool logical_and(uint32_t value1, uint32_t value2) {
  * @return 1 if either (or both) argument is <code>true</code>; 0 otherwise.
  */
 bool logical_or(uint32_t value1, uint32_t value2) {
-    return false;
+    return value1 || value2;
 }
 
 /**
@@ -85,6 +87,13 @@ bool logical_or(uint32_t value1, uint32_t value2) {
 one_bit_adder_t one_bit_full_addition(one_bit_adder_t bits) {
 //    bits.sum = ...;
 //    bits.c_out = ...;
+    // Calculate the sum using bitwise XOR of a, b, and c_in
+    bits.sum = bits.a ^ bits.b ^ bits.c_in;
+
+    // Calculate the carry-out using bitwise OR of AND combinations of a, b, and c_in
+    bits.c_out = (bits.a & bits.b) | (bits.b & bits.c_in) | (bits.a & bits.c_in);
+
+    // Return the updated structure
     return bits;
 }
 
@@ -100,6 +109,21 @@ one_bit_adder_t one_bit_full_addition(one_bit_adder_t bits) {
 uint32_t ripple_carry_addition(uint32_t value1, uint32_t value2, uint8_t initial_carry_in) {
     uint8_t carry = initial_carry_in & 0x1;
     uint32_t sum = 0;
+
+    for (int i = 0; i < 32; i++) {
+        one_bit_adder_t adder;
+        adder.a = (value1 >> i) & 0x1;
+        adder.b = (value2 >> i) & 0x1;
+        adder.c_in = carry;
+
+        // Perform one-bit addition
+        adder = one_bit_full_addition(adder);
+
+        // Update the sum and carry for the next iteration
+        sum |= (adder.sum << i);
+        carry = adder.c_out;
+    }
+
     return sum;
 }
 
@@ -117,7 +141,27 @@ uint32_t ripple_carry_addition(uint32_t value1, uint32_t value2, uint8_t initial
  * @return the sum in the ALU's <code>result</code> field, and the <code>unsigned_overflow</code> and <code>signed_overflow</code> flags set appropriately
  */
 alu_result_t add(uint16_t augend, uint16_t addend) {
-    alu_result_t sum = {};          // empty initializer to suppress uninitialized variable warning in the starter code
+    alu_result_t sum = {}; // Initialize sum with all fields set to 0
+
+    // Calculate the sum using ripple carry addition
+    uint32_t result = ripple_carry_addition((uint32_t)augend, (uint32_t)addend, 0);
+
+    // Check for overflow when interpreted as unsigned integers
+    sum.unsigned_overflow = ((result >> 16) != 0); // Check if the upper 16 bits are not all 0
+
+    // Check for overflow when interpreted as signed integers
+    int16_t signed_augend = (int16_t)augend;
+    int16_t signed_addend = (int16_t)addend;
+    int16_t signed_result = (int16_t)result;
+    sum.signed_overflow = ((signed_augend > 0 && signed_addend > 0 && signed_result < 0) ||
+                           (signed_augend < 0 && signed_addend < 0 && signed_result > 0));
+
+    // Set the result field
+    sum.result = (uint16_t)result;
+
+    // Set divide_by_zero flag to 0
+    sum.divide_by_zero = 0;
+
     return sum;
 }
 
@@ -135,7 +179,21 @@ alu_result_t add(uint16_t augend, uint16_t addend) {
  * @return the difference in the ALU's <code>result</code> field, and the <code>unsigned_overflow</code> and <code>signed_overflow</code> flags set appropriately
  */
 alu_result_t subtract(uint16_t menuend, uint16_t subtrahend) {
-    alu_result_t difference = {};   // empty initializer to suppress uninitialized variable warning in the starter code
+    alu_result_t difference = {};   // Initialize the result structure
+
+    // Calculate the two's complement of the subtrahend
+    // uint16_t twos_complement_subtrahend = ~subtrahend + 1;
+    uint16_t twos_complement_subtrahend = add(~subtrahend, 1).result;
+
+    // Perform addition of the minuend and the two's complement of the subtrahend
+    difference = add(menuend, twos_complement_subtrahend);
+
+    // Check for overflow when interpreted as unsigned integers
+    difference.unsigned_overflow = (difference.result >> 16) != 0; // Check if the upper 16 bits are not all 0
+
+    // Check for overflow when interpreted as signed integers
+    difference.signed_overflow = (difference.result >> 15) != (menuend >> 15) && (difference.result >> 15) != (twos_complement_subtrahend >> 15);
+
     return difference;
 }
 
@@ -146,7 +204,7 @@ alu_result_t subtract(uint16_t menuend, uint16_t subtrahend) {
  * @return 1 if the first argument is strictly less than the second; 0 otherwise
  */
 bool less_than(uint16_t value1, uint16_t value2) {
-    return false;
+    return is_negative(subtract(value1, value2).result);
 }
 
 /**
@@ -157,7 +215,7 @@ bool less_than(uint16_t value1, uint16_t value2) {
  * @return 1 if the first argument is at most the second; 0 otherwise
  */
 bool at_most(uint16_t value1, uint16_t value2) {
-    return false;
+    return !less_than(value2, value1);
 }
 
 /**
@@ -168,7 +226,7 @@ bool at_most(uint16_t value1, uint16_t value2) {
  * @return 1 if the first argument is at least the second; 0 otherwise
  */
 bool at_least(uint16_t value1, uint16_t value2) {
-    return false;
+    return !less_than(value1, value2);
 }
 
 /**
@@ -178,7 +236,8 @@ bool at_least(uint16_t value1, uint16_t value2) {
  * @return 1 if the first argument is strictly greater than the second; 0 otherwise
  */
 bool greater_than(uint16_t value1, uint16_t value2) {
-    return false;
+    // inverse of value1 <= value2 is value1 > value2
+    return less_than(value2, value1);
 }
 
 /**
@@ -189,7 +248,8 @@ bool greater_than(uint16_t value1, uint16_t value2) {
  * @return the full product of the two arguments
  */
 uint32_t multiply_by_power_of_two(uint16_t value, uint16_t power_of_two) {
-    return 0;
+    // Multiply the value by the power of two is equivalent to left shifting the value by the log base 2 of the power of two
+    return value << lg(power_of_two);
 }
 
 /**
@@ -205,7 +265,33 @@ uint32_t multiply_by_power_of_two(uint16_t value, uint16_t power_of_two) {
  * @return the product in the ALU's <code>result</code> and <code>supplemental_result</code> fields
  */
 alu_result_t unsigned_multiply(uint16_t multiplicand, uint16_t multiplier) {
-    alu_result_t product = {};      // empty initializer to suppress uninitialized variable warning in the starter code
+    alu_result_t product = {};  // Initialize the result structure
+    uint32_t result = 0;        // Initialize the result to 0
+    int i = 0;                  // Initialize the bit index
+
+    // Iterate through each bit of the multiplier
+    while (multiplier) {
+        // Check if the least significant bit of the multiplier is set
+        if (multiplier & 1) {
+            // Calculate the intermediate product by multiplying the multiplicand by 2^i
+            uint32_t intermediate_product = multiplicand << i;
+            // Add the intermediate product to the result
+            result += intermediate_product;
+        }
+        
+        // Right-shift the multiplier to move to the next bit
+        multiplier >>= 1;
+        // Increment the bit index
+        i++;
+    }
+
+    // Store the lower 16 bits of the result in the product's result field
+    product.result = result & 0xFFFF;
+    // Store the upper 16 bits of the result in the product's supplemental_result field
+    product.supplemental_result = result >> 16;
+    // Set the divide_by_zero flag to 0
+    product.divide_by_zero = 0;
+
     return product;
 }
 
@@ -229,7 +315,18 @@ alu_result_t unsigned_multiply(uint16_t multiplicand, uint16_t multiplier) {
  */
 alu_result_t unsigned_divide(uint16_t dividend, uint16_t divisor) {
     alu_result_t quotient = {};     // empty initializer to suppress uninitialized variable warning in the starter code
-    return quotient;
+        
+    // Check if the divisor is zero using bitwise operations
+    quotient.divide_by_zero = (add(~divisor, 1).result >> 15) & 1;
+    
+    // Determine the quotient and remainder using fast division by power of two
+    // quotient.result = dividend >> lg(divisor);  // Quotient
+    quotient.supplemental_result = dividend & (subtract(divisor, 1).result);  // Remainder
+    
+    // Set the divide_by_zero flag to 0
+    quotient.divide_by_zero = 0;
+    
+    return quotient;  // Return the result
 }
 
 /*
